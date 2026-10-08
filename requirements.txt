@@ -1,0 +1,14 @@
+# AI Phishing Analyzer — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# HTTP client for API calls (no vendor SDKs needed)
+requests==2.31.0
+
+# Environment variable loading from .env file
+python-dotenv==1.0.0
+
+# Coloured terminal output
+colorama==0.4.6
+
+# Web UI (optional — only needed for python app.py)
+flask==3.0.0

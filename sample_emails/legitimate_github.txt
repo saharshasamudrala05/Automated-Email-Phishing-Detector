@@ -1,0 +1,36 @@
+From: noreply@github.com
+To: developer@example.com
+Subject: [GitHub] A third-party OAuth application has been added to your account
+Date: Mon, 7 Oct 2024 16:45:00 +0000
+Message-ID: <abc123@github.com>
+DKIM-Signature: v=1; a=rsa-sha256; d=github.com; s=pf2014;
+
+Hi @developerusername,
+
+A third-party OAuth application (VS Code GitHub Copilot) was recently authorized to access your account.
+
+Application name: GitHub Copilot for VS Code
+Authorized by: developerusername
+Authorization date: October 7, 2024 at 4:45 PM UTC
+Permissions granted:
+  - Read access to code (read:packages)
+  - Read access to profile information
+
+If you did authorize this application, you can safely disregard this email.
+
+If you did NOT authorize this application, please visit your GitHub settings immediately to revoke access:
+https://github.com/settings/applications
+
+You can review all applications with access to your account at:
+https://github.com/settings/applications
+
+If you have any concerns, please contact GitHub Support at https://support.github.com
+
+Thanks,
+The GitHub Team
+
+You're receiving this email because an OAuth application was added to your GitHub account (developerusername).
+
+GitHub, Inc.
+88 Colin P Kelly Jr Street
+San Francisco, CA 94107

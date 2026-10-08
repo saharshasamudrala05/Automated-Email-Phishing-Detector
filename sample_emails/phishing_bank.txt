@@ -1,0 +1,33 @@
+From: security@bancofamerica-secure.com
+To: customer@gmail.com
+Subject: URGENT: Your Bank of America Account Has Been Suspended - Immediate Action Required
+Date: Mon, 7 Oct 2024 09:15:33 -0500
+Reply-To: verify@bancofamerica-secure.com
+X-Mailer: PHPMailer 5.2
+
+Dear Valued Customer,
+
+We have detected SUSPICIOUS ACTIVITY on your Bank of America account and have temporarily SUSPENDED your access for your security.
+
+Your account will be permanently closed within 24 HOURS if you do not verify your information immediately.
+
+To restore your account access, please click the link below NOW:
+
+http://bancofamerica-secure.com/verify/account?token=8f92jd82ks92
+
+You will need to provide:
+- Full Name
+- Account Number
+- Social Security Number
+- Online Banking Password
+- Debit Card PIN
+
+⚠️ WARNING: Failure to verify within 24 hours will result in PERMANENT account closure and any pending transactions will be CANCELLED.
+
+This is an automated security alert. Do NOT ignore this email.
+
+Thank you for being a Bank of America customer.
+
+Bank of America Security Team
+1-800-FAKE-NUM
+© 2024 Bank of America Corporation

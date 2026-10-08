@@ -1,0 +1,28 @@
+From: John Smith CEO <j.smith.ceo@company-corp.net>
+To: accounts.payable@yourcompany.com
+Subject: Confidential Wire Transfer - Handle Immediately
+Date: Tue, 8 Oct 2024 14:22:10 +0000
+
+Hi Sarah,
+
+I'm currently in an important board meeting and cannot take calls right now.
+
+I need you to process an urgent wire transfer of $47,500 to one of our new vendors. This is time-sensitive and needs to go out today before 3 PM EST.
+
+Please keep this confidential for now — I'll explain everything once the meeting is over. Don't discuss with anyone in the office yet as this is a sensitive acquisition deal.
+
+Wire details:
+Bank: International Commerce Bank
+Account Name: Nexus Global Solutions LLC
+Account Number: 8842910037
+Routing: 021000021
+Amount: $47,500.00
+Reference: Project Falcon - Vendor Payment
+
+Please confirm by email once done. Do NOT call me during the meeting.
+
+Thanks,
+John Smith
+CEO, YourCompany Inc.
+
+Sent from my iPhone
