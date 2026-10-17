@@ -1,4 +1,4 @@
-# PhishGuard — AI-Powered Phishing Detection Platform
+# PhishGuard: AI-Powered Phishing Detection Platform
 
 A production-grade email security platform that protects your Gmail inbox using a
 **4-layer hybrid security pipeline** — cryptographic protocol verification first,
