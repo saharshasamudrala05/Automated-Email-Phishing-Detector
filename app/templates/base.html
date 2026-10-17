@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>{% block title %}PhishGuard SOC{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-root:       #060b14;
+      --bg-nav:        #080e1a;
+      --bg-card:       #0a1020;
+      --bg-card-alt:   #0c1428;
+      --bg-input:      #0f1929;
+      --border:        #1a2744;
+      --border-active: #2a4a8a;
+      --text-primary:  #e2e8f0;
+      --text-secondary:#7a8fa8;
+      --text-muted:    #4a5a70;
+      --accent:        #0ea5e9;
+      --accent-glow:   rgba(14,165,233,0.15);
+      --success:       #10b981;
+      --success-bg:    rgba(16,185,129,0.08);
+      --warning:       #f59e0b;
+      --warning-bg:    rgba(245,158,11,0.08);
+      --danger:        #ef4444;
+      --danger-bg:     rgba(239,68,68,0.08);
+      --critical:      #dc2626;
+      --critical-glow: rgba(220,38,38,0.2);
+      --font-mono:     'JetBrains Mono', 'Courier New', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-root);
+      color: var(--text-primary);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── NAVIGATION ── */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg-nav);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex; align-items: center; gap: 0;
+      height: 56px;
+      backdrop-filter: blur(12px);
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; color: inherit;
+      font-weight: 800; font-size: 1.05rem;
+      letter-spacing: -0.02em;
+      padding-right: 24px;
+      border-right: 1px solid var(--border);
+      margin-right: 24px;
+    }
+    .nav-brand .shield { font-size: 1.3rem; }
+    .nav-brand .brand-text { color: var(--text-primary); }
+    .nav-brand .brand-sub { color: var(--accent); font-size: 0.65rem;
+                            font-weight: 600; letter-spacing: 0.12em;
+                            text-transform: uppercase; display: block; margin-top: -2px; }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-link {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 6px;
+      color: var(--text-secondary); text-decoration: none;
+      font-size: 0.82rem; font-weight: 500;
+      transition: all .15s; letter-spacing: 0.01em;
+    }
+    .nav-link:hover, .nav-link.active {
+      background: var(--bg-card); color: var(--text-primary);
+    }
+    .nav-link.active { color: var(--accent); }
+
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+    /* Live status badge */
+    .status-badge {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 99px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
+      color: var(--text-secondary);
+    }
+    .status-badge .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-muted);
+    }
+    .status-badge.live .dot {
+      background: var(--success);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+      animation: pulse 2s infinite;
+    }
+    .status-badge.live { color: var(--success); border-color: rgba(16,185,129,0.3); }
+
+    /* Threat count badge */
+    .threat-badge {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 99px;
+      background: var(--danger-bg); border: 1px solid rgba(239,68,68,0.3);
+      color: var(--danger); font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    .threat-badge.zero { background: var(--success-bg); border-color: rgba(16,185,129,0.3);
+                         color: var(--success); }
+
+    .btn-connect {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 8px;
+      background: var(--accent); color: white;
+      text-decoration: none; font-size: 0.8rem; font-weight: 600;
+      border: none; cursor: pointer; transition: all .15s;
+    }
+    .btn-connect:hover { background: #0284c7; transform: translateY(-1px); }
+    .btn-disconnect {
+      padding: 6px 14px; border-radius: 8px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-secondary); text-decoration: none;
+      font-size: 0.8rem; font-weight: 500; cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-disconnect:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ── FLASH MESSAGES ── */
+    .flash-container { padding: 0 24px; margin-top: 12px; }
+    .flash {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-radius: 8px; margin-bottom: 8px;
+      font-size: 0.85rem; font-weight: 500;
+    }
+    .flash.success { background: var(--success-bg); border: 1px solid rgba(16,185,129,0.3); color: var(--success); }
+    .flash.error   { background: var(--danger-bg);  border: 1px solid rgba(239,68,68,0.3);  color: var(--danger);  }
+    .flash.info    { background: var(--accent-glow); border: 1px solid rgba(14,165,233,0.3); color: var(--accent);  }
+    .flash.warning { background: var(--warning-bg); border: 1px solid rgba(245,158,11,0.3); color: var(--warning); }
+
+    /* ── LAYOUT ── */
+    .page { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-secondary);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-body { padding: 18px; }
+
+    /* ── VERDICT PILLS ── */
+    .verdict {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 99px;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+    }
+    .verdict.PHISHING   { background: var(--danger-bg);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3);  }
+    .verdict.SUSPICIOUS { background: var(--warning-bg); color: var(--warning); border: 1px solid rgba(245,158,11,0.3); }
+    .verdict.SAFE       { background: var(--success-bg); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+    .verdict.PENDING    { background: var(--bg-card-alt);color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* ── SCORE BAR ── */
+    .score-bar-wrap { display: flex; align-items: center; gap: 10px; }
+    .score-bar-bg { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+    .score-bar-fill.danger  { background: linear-gradient(90deg, var(--critical), var(--danger)); }
+    .score-bar-fill.warning { background: linear-gradient(90deg, var(--warning), #f97316); }
+    .score-bar-fill.success { background: linear-gradient(90deg, var(--success), #34d399); }
+    .score-num { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600;
+                 min-width: 36px; text-align: right; }
+    .score-num.danger  { color: var(--danger); }
+    .score-num.warning { color: var(--warning); }
+    .score-num.success { color: var(--success); }
+
+    /* ── TABLES ── */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      text-align: left; padding: 10px 14px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(26,39,68,0.5);
+      vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover { background: var(--bg-card-alt); cursor: pointer; }
+    .data-table .mono { font-family: var(--font-mono); font-size: 0.78rem; }
+    .data-table .truncate { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600;
+      border: none; cursor: pointer; transition: all .15s;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #0284c7; transform: translateY(-1px); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: var(--danger-bg); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); }
+    .btn-danger:hover { background: rgba(239,68,68,0.2); }
+
+    /* ── FLAGS LIST ── */
+    .flag-item {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid rgba(26,39,68,0.5);
+    }
+    .flag-item:last-child { border-bottom: none; }
+    .flag-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .flag-label { font-weight: 600; font-size: 0.83rem; }
+    .flag-detail { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+    .sev-badge {
+      display: inline-block; padding: 1px 7px; border-radius: 99px;
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; flex-shrink: 0;
+    }
+    .sev-critical { background: rgba(220,38,38,0.15); color: #f87171; }
+    .sev-high     { background: rgba(239,68,68,0.1);  color: var(--danger);  }
+    .sev-medium   { background: rgba(245,158,11,0.1); color: var(--warning); }
+    .sev-low      { background: rgba(16,185,129,0.1); color: var(--success); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    .fade-in { animation: fadeIn .3s ease; }
+
+    /* ── UTILITY ── */
+    .text-danger  { color: var(--danger); }
+    .text-warning { color: var(--warning); }
+    .text-success { color: var(--success); }
+    .text-accent  { color: var(--accent); }
+    .text-muted   { color: var(--text-muted); }
+    .text-secondary{ color: var(--text-secondary); }
+    .mono         { font-family: var(--font-mono); }
+    .bold         { font-weight: 700; }
+    .grid-2       { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3       { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .grid-4       { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+    @media(max-width:900px){
+      .grid-4,.grid-3{grid-template-columns:1fr 1fr;}
+      .grid-2{grid-template-columns:1fr;}
+    }
+    @media(max-width:600px){
+      .grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}
+      .page{padding:12px;}
+      .nav{padding:0 12px;}
+    }
+    .mb-4{margin-bottom:4px} .mb-8{margin-bottom:8px} .mb-12{margin-bottom:12px}
+    .mb-16{margin-bottom:16px} .mb-24{margin-bottom:24px}
+    .mt-4{margin-top:4px} .mt-8{margin-top:8px} .mt-16{margin-top:16px}
+    .gap-8{gap:8px} .gap-12{gap:12px} .gap-16{gap:16px}
+    .flex{display:flex} .items-center{align-items:center}
+    .justify-between{justify-content:space-between} .flex-col{flex-direction:column}
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav class="nav">
+  <a href="/" class="nav-brand">
+    <span class="shield">🛡️</span>
+    <div>
+      <span class="brand-text">PhishGuard</span>
+      <span class="brand-sub">SOC Platform</span>
+    </div>
+  </a>
+
+  <div class="nav-links">
+    <a href="/"            class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">📊 Dashboard</a>
+    <a href="/audit-log"   class="nav-link {% if request.endpoint == 'dashboard.audit_log' %}active{% endif %}">📋 Audit Log</a>
+    <a href="/api/stats"   class="nav-link" target="_blank">📡 API</a>
+  </div>
+
+  <div class="nav-right">
+    {% if gmail_connected %}
+      <div class="status-badge live" id="liveStatus">
+        <span class="dot"></span>
+        <span>MONITORING</span>
+      </div>
+    {% else %}
+      <div class="status-badge" id="liveStatus">
+        <span class="dot"></span>
+        <span>OFFLINE</span>
+      </div>
+    {% endif %}
+
+    <div class="threat-badge {% if stats is defined and (stats.phishing + stats.suspicious) == 0 %}zero{% endif %}"
+         id="threatCount">
+      🚨 <span id="threatNum">{{ (stats.phishing + stats.suspicious) if stats is defined else 0 }}</span> THREATS
+    </div>
+
+    {% if gmail_connected %}
+      <a href="/auth/logout" class="btn-disconnect">Disconnect Gmail</a>
+    {% else %}
+      <a href="/auth/login"  class="btn-connect">🔗 Connect Gmail</a>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- FLASH MESSAGES -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-container">
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+<script>
+// Auto-refresh stats every 30 seconds
+let refreshTimer = setInterval(async () => {
+  try {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+    const threats = (s.phishing || 0) + (s.suspicious || 0);
+    const el = document.getElementById('threatNum');
+    if (el) el.textContent = threats;
+    const badge = document.getElementById('threatCount');
+    if (badge) badge.className = 'threat-badge' + (threats === 0 ? ' zero' : '');
+  } catch(e) {}
+}, 30000);
+
+// Risk colour helper
+function riskColour(score) {
+  if (score >= 70) return 'danger';
+  if (score >= 40) return 'warning';
+  return 'success';
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+{% block title %}PhishGuard — SOC Dashboard{% endblock %}
+
+{% block head %}
+<style>
+/* ── STAT CARDS ── */
+.stat-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 20px;
+  position: relative; overflow: hidden; transition: border-color .2s;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--accent-bar, var(--border));
+}
+.stat-card.red   { --accent-bar: var(--danger);  border-color: rgba(239,68,68,0.2); }
+.stat-card.amber { --accent-bar: var(--warning); border-color: rgba(245,158,11,0.2); }
+.stat-card.green { --accent-bar: var(--success); border-color: rgba(16,185,129,0.2); }
+.stat-card.blue  { --accent-bar: var(--accent);  border-color: rgba(14,165,233,0.2); }
+.stat-card:hover { border-color: var(--accent-bar, var(--border)); }
+.stat-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+              text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+.stat-value { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+.stat-card.red   .stat-value { color: var(--danger); }
+.stat-card.amber .stat-value { color: var(--warning); }
+.stat-card.green .stat-value { color: var(--success); }
+.stat-card.blue  .stat-value { color: var(--accent); }
+.stat-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+.stat-icon { position: absolute; right: 18px; top: 18px; font-size: 1.6rem; opacity: .12; }
+
+/* ── PIPELINE STATUS ── */
+.pipeline-bar {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 20px; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 0; overflow: hidden;
+}
+.pipeline-bar .pl-title {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-muted);
+  padding-right: 20px; border-right: 1px solid var(--border); margin-right: 20px;
+  flex-shrink: 0;
+}
+.pipeline-layers { display: flex; gap: 0; flex: 1; }
+.layer-chip {
+  display: flex; align-items: center; gap: 8px; flex: 1;
+  padding: 8px 16px; position: relative;
+}
+.layer-chip::after {
+  content: '→'; position: absolute; right: -4px; z-index: 1;
+  color: var(--text-muted); font-size: 0.9rem;
+}
+.layer-chip:last-child::after { display: none; }
+.layer-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: white;
+  font-size: 0.65rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.layer-info .layer-name { font-size: 0.75rem; font-weight: 700; color: var(--text-primary); }
+.layer-info .layer-desc { font-size: 0.65rem; color: var(--text-muted); }
+.layer-status { margin-left: auto; }
+.layer-status .ok { color: var(--success); font-size: 0.75rem; font-weight: 600; }
+.layer-status .standby { color: var(--text-muted); font-size: 0.75rem; }
+
+/* ── THREAT FEED ── */
+.threat-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 0; border-bottom: 1px solid rgba(26,39,68,0.5);
+  transition: all .15s; cursor: pointer; text-decoration: none; color: inherit;
+}
+.threat-row:last-child { border-bottom: none; }
+.threat-row:hover { padding-left: 6px; }
+.threat-score-ring {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 0.78rem;
+  border: 2px solid;
+}
+.threat-score-ring.danger  { background:var(--danger-bg); border-color:var(--danger); color:var(--danger); }
+.threat-score-ring.warning { background:var(--warning-bg);border-color:var(--warning);color:var(--warning); }
+.threat-score-ring.success { background:var(--success-bg);border-color:var(--success);color:var(--success); }
+.threat-subject { font-weight: 600; font-size: 0.85rem;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.threat-sender  { font-size: 0.75rem; color: var(--text-secondary);
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.threat-meta    { margin-left: auto; text-align: right; flex-shrink: 0; }
+.threat-time    { font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono); }
+
+/* ── SCAN NOW BUTTON ── */
+.scan-btn {
+  background: transparent; border: 1px solid var(--accent);
+  color: var(--accent); border-radius: 8px;
+  padding: 6px 14px; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px;
+}
+.scan-btn:hover { background: var(--accent-glow); }
+.scan-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── CHARTS ── */
+.chart-wrap { height: 200px; position: relative; }
+
+/* ── PIPELINE DETAIL TABLE ── */
+.layer-section { margin-bottom: 16px; }
+.layer-section-title {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--bg-card-alt);
+  border-radius: 8px; margin-bottom: 8px;
+  font-size: 0.78rem; font-weight: 700;
+}
+.layer-section-title .lnum {
+  background: var(--accent); color: white; width: 20px; height: 20px;
+  border-radius: 50%; display:flex;align-items:center;justify-content:center;
+  font-size:0.65rem; font-weight:800; flex-shrink:0;
+}
+.score-chip {
+  margin-left: auto; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600;
+  padding: 2px 8px; border-radius: 99px;
+}
+.score-chip.danger  { background:var(--danger-bg);  color:var(--danger); }
+.score-chip.warning { background:var(--warning-bg); color:var(--warning); }
+.score-chip.success { background:var(--success-bg); color:var(--success); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page fade-in">
+
+  {% if not connected %}
+  <!-- ── NOT CONNECTED ── -->
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;gap:16px">
+    <div style="font-size:4rem">🛡️</div>
+    <h1 style="font-size:1.8rem;font-weight:800;letter-spacing:-0.03em">Connect your Gmail inbox</h1>
+    <p style="color:var(--text-secondary);max-width:420px;line-height:1.7">
+      PhishGuard monitors your inbox in real-time, running every email through a
+      4-layer cryptographic and AI security pipeline.
+    </p>
+    <a href="/auth/login" class="btn btn-primary" style="font-size:0.9rem;padding:10px 24px">
+      🔗 Connect Gmail to Begin
+    </a>
+    <div style="display:flex;gap:24px;margin-top:16px">
+      {% for item in [("🔐","OAuth 2.0 Only","No passwords stored"),("📧","Read + Label","Minimal Gmail scope"),("🤖","AI + Protocol","4-layer pipeline"),("🔔","Live Alerts","Telegram notifications")] %}
+      <div style="text-align:center">
+        <div style="font-size:1.4rem">{{ item[0] }}</div>
+        <div style="font-size:0.75rem;font-weight:700;margin-top:4px">{{ item[1] }}</div>
+        <div style="font-size:0.68rem;color:var(--text-muted)">{{ item[2] }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+
+  <!-- ── CONNECTED: MAIN DASHBOARD ── -->
+
+  <!-- PIPELINE STATUS BAR -->
+  <div class="pipeline-bar mb-24">
+    <div class="pl-title">🔄 PIPELINE</div>
+    <div class="pipeline-layers">
+      {% for layer in [
+        ("1","L1: AUTH","SPF · DKIM · DMARC"),
+        ("2","L2: DOMAIN","WHOIS · Typosquat · URL"),
+        ("3","L3: AI","Constrained Scoring"),
+        ("4","L4: ACTIONS","Label · Alert · Log")
+      ] %}
+      <div class="layer-chip">
+        <div class="layer-num">{{ layer[0] }}</div>
+        <div class="layer-info">
+          <div class="layer-name">{{ layer[1] }}</div>
+          <div class="layer-desc">{{ layer[2] }}</div>
+        </div>
+        <div class="layer-status">
+          {% if poller.running %}
+            <span class="ok">✓ ACTIVE</span>
+          {% else %}
+            <span class="standby">STANDBY</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <!-- Scan Now -->
+    <form method="POST" action="/scan-now" style="margin-left:16px;flex-shrink:0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="scan-btn" {% if poller.is_polling %}disabled{% endif %}>
+        {% if poller.is_polling %}⏳ Scanning…{% else %}▶ Scan Now{% endif %}
+      </button>
+    </form>
+  </div>
+
+  <!-- STATS ROW -->
+  <div class="grid-4 mb-24">
+    <div class="stat-card red">
+      <div class="stat-icon">🚨</div>
+      <div class="stat-label">Phishing Detected</div>
+      <div class="stat-value" id="statPhishing">{{ stats.phishing }}</div>
+      <div class="stat-sub">emails confirmed malicious</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-icon">⚠️</div>
+      <div class="stat-label">Suspicious</div>
+      <div class="stat-value" id="statSuspicious">{{ stats.suspicious }}</div>
+      <div class="stat-sub">requiring review</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">✅</div>
+      <div class="stat-label">Safe / Cleared</div>
+      <div class="stat-value" id="statSafe">{{ stats.safe }}</div>
+      <div class="stat-sub">passed all layers</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-icon">📊</div>
+      <div class="stat-label">Detection Rate</div>
+      <div class="stat-value" id="statRate">{{ stats.detection_rate }}%</div>
+      <div class="stat-sub">of {{ stats.total }} emails scanned</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="grid-2 mb-24">
+
+    <!-- THREAT FEED -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🚨 ACTIVE THREATS</span>
+        <a href="/api/threats" class="btn btn-ghost" style="font-size:0.72rem;padding:4px 10px" target="_blank">All →</a>
+      </div>
+      <div class="card-body" style="padding:0 18px" id="threatFeed">
+        {% if threats %}
+          {% for t in threats %}
+          <a href="/threats/{{ t.id }}" class="threat-row">
+            <div class="threat-score-ring {{ t.final_score | risk_colour }}">{{ t.final_score }}</div>
+            <div style="flex:1;min-width:0">
+              <div class="threat-subject">{{ t.subject or '(no subject)' }}</div>
+              <div class="threat-sender">{{ t.sender or 'Unknown sender' }}</div>
+            </div>
+            <div class="threat-meta">
+              <span class="verdict {{ t.verdict }}">{{ t.verdict | verdict_icon }} {{ t.verdict }}</span>
+              <div class="threat-time">{{ (t.scanned_at or '')[:16].replace('T',' ') }}</div>
+            </div>
+          </a>
+          {% endfor %}
+        {% else %}
+          <div style="text-align:center;padding:40px 0;color:var(--text-muted)">
+            <div style="font-size:2rem;margin-bottom:8px">✅</div>
+            <div style="font-weight:600">No threats detected</div>
+            <div style="font-size:0.8rem;margin-top:4px">All scanned emails have cleared the pipeline</div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- CHARTS PANEL -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <!-- Risk Distribution -->
+      <div class="card" style="flex:1">
+        <div class="card-header">
+          <span class="card-title">📊 RISK DISTRIBUTION</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chartRisk"></canvas></div>
+        </div>
+      </div>
+      <!-- Threat Categories -->
+      <div class="card" style="flex:1">
+        <div class="card-header">
+          <span class="card-title">🎯 THREAT CATEGORIES</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chartCat"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SCAN HISTORY TABLE -->
+  <div class="card mb-24">
+    <div class="card-header">
+      <span class="card-title">📧 SCAN HISTORY</span>
+      <span style="font-size:0.75rem;color:var(--text-muted)">
+        Last {{ recent | length }} emails · Auto-refreshes every 30s
+      </span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="data-table" id="scanTable">
+        <thead>
+          <tr>
+            <th>VERDICT</th>
+            <th>RISK</th>
+            <th>SUBJECT</th>
+            <th>SENDER</th>
+            <th>L1</th>
+            <th>L2</th>
+            <th>L3</th>
+            <th>CATEGORY</th>
+            <th>SCANNED</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in recent %}
+          <tr onclick="window.location='/threats/{{ s.id }}'" style="cursor:pointer">
+            <td><span class="verdict {{ s.verdict }}">{{ s.verdict | verdict_icon }} {{ s.verdict }}</span></td>
+            <td>
+              <div class="score-bar-wrap" style="min-width:100px">
+                <div class="score-bar-bg">
+                  <div class="score-bar-fill {{ s.final_score | risk_colour }}" style="width:{{ s.final_score }}%"></div>
+                </div>
+                <span class="score-num {{ s.final_score | risk_colour }}">{{ s.final_score }}</span>
+              </div>
+            </td>
+            <td class="truncate" style="max-width:200px">{{ s.subject or '(none)' }}</td>
+            <td class="mono truncate" style="max-width:160px;font-size:0.75rem">{{ s.sender or '?' }}</td>
+            <td>
+              <span style="font-family:var(--font-mono);font-size:0.72rem;
+                           color:{% if s.l1_risk_score > 30 %}var(--danger){% else %}var(--success){% endif %}">
+                {{ s.l1_risk_score }}
+              </span>
+            </td>
+            <td>
+              <span style="font-family:var(--font-mono);font-size:0.72rem;
+                           color:{% if s.l2_risk_score > 30 %}var(--danger){% else %}var(--success){% endif %}">
+                {{ s.l2_risk_score }}
+              </span>
+            </td>
+            <td>
+              <span style="font-family:var(--font-mono);font-size:0.72rem;
+                           color:{% if s.l3_content_risk > 30 %}var(--danger){% else %}var(--success){% endif %}">
+                {{ s.l3_content_risk }}
+              </span>
+            </td>
+            <td style="font-size:0.75rem;color:var(--text-secondary)">{{ s.l3_threat_category or '—' }}</td>
+            <td class="mono" style="font-size:0.72rem;color:var(--text-muted)">
+              {{ (s.scanned_at or '')[:16].replace('T',' ') }}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted)">
+            No emails scanned yet. Click "Scan Now" to begin.
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- POLLER STATUS FOOTER -->
+  <div style="display:flex;gap:24px;align-items:center;padding:12px 0;border-top:1px solid var(--border);
+              font-size:0.72rem;color:var(--text-muted)">
+    <span>🔗 {{ gmail_email }}</span>
+    <span>📡 Poll interval: every {{ poller.interval_min }} min</span>
+    <span>🕐 Last scan: {{ poller.last_poll[:16].replace('T',' ') if poller.last_poll else 'Never' }}</span>
+    <span>✅ Scans completed: {{ poller.poll_count }}</span>
+    <span style="margin-left:auto">Next: {{ poller.next_run[:16].replace('T',' ') if poller.next_run else '—' }}</span>
+  </div>
+
+  {% endif %}<!-- end connected -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if connected %}
+<script>
+// ── Charts Setup ────────────────────────────────────────────
+const chartDefaults = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { labels: { color: '#7a8fa8', font: { size: 11, family: 'Inter' } } } }
+};
+
+// Risk Distribution Bar Chart
+(async () => {
+  try {
+    const r   = await fetch('/api/charts/risk-distribution');
+    const d   = await r.json();
+    const ctx = document.getElementById('chartRisk').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels:   d.labels,
+        datasets: [{
+          label:           'Emails',
+          data:            d.data,
+          backgroundColor: ['#10b98133','#10b98133','#f59e0b33','#ef444433','#dc262633'],
+          borderColor:     ['#10b981','#10b981','#f59e0b','#ef4444','#dc2626'],
+          borderWidth: 1, borderRadius: 4,
+        }]
+      },
+      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins,
+        legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#4a5a70' }, grid: { color: '#1a2744' } },
+          y: { ticks: { color: '#4a5a70', stepSize: 1 }, grid: { color: '#1a2744' } }
+        }
+      }
+    });
+  } catch(e) {}
+})();
+
+// Threat Categories Doughnut
+(async () => {
+  try {
+    const r   = await fetch('/api/charts/categories');
+    const d   = await r.json();
+    if (!d.labels || d.labels.length === 0) return;
+    const ctx = document.getElementById('chartCat').getContext('2d');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels:   d.labels,
+        datasets: [{
+          data:            d.data,
+          backgroundColor: ['#ef444433','#f59e0b33','#a855f733','#0ea5e933','#10b98133'],
+          borderColor:     ['#ef4444','#f59e0b','#a855f7','#0ea5e9','#10b981'],
+          borderWidth: 1,
+        }]
+      },
+      options: { ...chartDefaults, cutout: '65%' }
+    });
+  } catch(e) {}
+})();
+
+// Live stat refresh
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+    document.getElementById('statPhishing').textContent   = s.phishing   || 0;
+    document.getElementById('statSuspicious').textContent = s.suspicious || 0;
+    document.getElementById('statSafe').textContent       = s.safe       || 0;
+    document.getElementById('statRate').textContent       = (s.detection_rate || 0) + '%';
+  } catch(e) {}
+}, 30000);
+</script>
+{% endif %}
+{% endblock %}

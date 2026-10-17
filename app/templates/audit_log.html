@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Audit Log — PhishGuard{% endblock %}
+
+{% block content %}
+<div class="page fade-in">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+    <div>
+      <h1 style="font-size:1.2rem;font-weight:800;letter-spacing:-0.02em">📋 Audit Log</h1>
+      <p style="color:var(--text-muted);font-size:0.8rem;margin-top:4px">
+        Immutable record of all system actions — last {{ logs|length }} entries
+      </p>
+    </div>
+    <a href="/" class="btn btn-ghost">← Dashboard</a>
+  </div>
+
+  <div class="card">
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>TIMESTAMP (UTC)</th>
+            <th>ACTION</th>
+            <th>DETAILS</th>
+            <th>IP ADDRESS</th>
+            <th>EMAIL ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="mono" style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap">
+              {{ log.created_at[:19].replace('T',' ') if log.created_at else '—' }}
+            </td>
+            <td>
+              <span style="font-family:var(--font-mono);font-size:0.75rem;font-weight:700;
+                padding:2px 8px;border-radius:4px;
+                {% if 'PHISHING' in log.action or 'ERROR' in log.action %}
+                  background:var(--danger-bg);color:var(--danger);
+                {% elif 'CONNECTED' in log.action or 'SAFE' in log.action %}
+                  background:var(--success-bg);color:var(--success);
+                {% elif 'SUSPICIOUS' in log.action %}
+                  background:var(--warning-bg);color:var(--warning);
+                {% else %}
+                  background:var(--bg-card-alt);color:var(--text-secondary);
+                {% endif %}">
+                {{ log.action }}
+              </span>
+            </td>
+            <td style="font-size:0.78rem;color:var(--text-secondary);max-width:400px;
+                       overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              {{ log.details or '—' }}
+            </td>
+            <td class="mono" style="font-size:0.75rem;color:var(--text-muted)">
+              {{ log.ip_address or '—' }}
+            </td>
+            <td style="font-size:0.78rem;color:var(--text-muted)">
+              {% if log.email_id %}
+                <a href="/threats/{{ log.email_id }}"
+                   style="color:var(--accent);text-decoration:none">#{{ log.email_id }}</a>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">
+              No audit events recorded yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

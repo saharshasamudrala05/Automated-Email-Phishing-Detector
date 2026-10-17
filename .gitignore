@@ -1,0 +1,31 @@
+# Secrets — NEVER commit these
+.env
+credentials.json
+gmail_token.json
+*.json.bak
+
+# Database (contains email data)
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+.venv/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log

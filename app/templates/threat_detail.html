@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% block title %}Threat Report #{{ scan.id }} — PhishGuard{% endblock %}
+
+{% block head %}
+<style>
+.detail-hero {
+  border-radius: 12px; padding: 24px; margin-bottom: 24px;
+  border: 1px solid; position: relative; overflow: hidden;
+}
+.detail-hero.PHISHING   { border-color:rgba(239,68,68,0.4);  background:linear-gradient(135deg,rgba(220,38,38,0.08),var(--bg-card)); }
+.detail-hero.SUSPICIOUS { border-color:rgba(245,158,11,0.4); background:linear-gradient(135deg,rgba(245,158,11,0.08),var(--bg-card)); }
+.detail-hero.SAFE       { border-color:rgba(16,185,129,0.4); background:linear-gradient(135deg,rgba(16,185,129,0.08),var(--bg-card)); }
+
+.hero-verdict { font-size: 2rem; font-weight: 900; letter-spacing: -0.04em; }
+.hero-verdict.PHISHING   { color: var(--danger); }
+.hero-verdict.SUSPICIOUS { color: var(--warning); }
+.hero-verdict.SAFE       { color: var(--success); }
+
+.score-gauge {
+  width: 100px; height: 100px; border-radius: 50%; flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 4px solid; position: relative;
+}
+.score-gauge.danger  { border-color:var(--danger);  background:var(--danger-bg); }
+.score-gauge.warning { border-color:var(--warning); background:var(--warning-bg); }
+.score-gauge.success { border-color:var(--success); background:var(--success-bg); }
+.score-gauge .num { font-size: 1.8rem; font-weight: 900; line-height: 1; }
+.score-gauge.danger  .num { color: var(--danger); }
+.score-gauge.warning .num { color: var(--warning); }
+.score-gauge.success .num { color: var(--success); }
+.score-gauge .den { font-size: 0.65rem; color: var(--text-muted); }
+
+.meta-grid {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: 6px 16px; font-size: 0.83rem;
+}
+.meta-grid .lbl { color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+.meta-grid .val { color: var(--text-primary); word-break: break-all; }
+
+/* LAYER SECTIONS */
+.layer-card {
+  border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 16px;
+}
+.layer-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  background: var(--bg-card-alt);
+}
+.layer-num-badge {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent); color: white;
+  font-size: 0.75rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.layer-header-title { font-weight: 700; font-size: 0.88rem; }
+.layer-header-sub   { font-size: 0.72rem; color: var(--text-muted); }
+.layer-status-chip {
+  margin-left: auto; padding: 4px 12px; border-radius: 99px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+  display: flex; align-items: center; gap: 6px;
+}
+.layer-status-chip.pass { background:var(--success-bg); color:var(--success); border:1px solid rgba(16,185,129,0.3); }
+.layer-status-chip.fail { background:var(--danger-bg);  color:var(--danger);  border:1px solid rgba(239,68,68,0.3);  }
+.layer-status-chip.warn { background:var(--warning-bg); color:var(--warning); border:1px solid rgba(245,158,11,0.3); }
+
+.layer-body { padding: 18px; background: var(--bg-card); }
+.layer-score-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border);
+}
+.layer-score-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; flex-shrink: 0; }
+
+.flag-list { display: flex; flex-direction: column; gap: 0; }
+.flag-entry {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 0; border-bottom: 1px solid rgba(26,39,68,0.4);
+}
+.flag-entry:last-child { border-bottom: none; padding-bottom: 0; }
+.flag-sev {
+  padding: 2px 8px; border-radius: 99px;
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; flex-shrink: 0; margin-top: 1px;
+}
+.flag-sev.critical { background:rgba(220,38,38,0.15); color:#f87171; }
+.flag-sev.high     { background:var(--danger-bg);  color:var(--danger);  }
+.flag-sev.medium   { background:var(--warning-bg); color:var(--warning); }
+.flag-sev.low      { background:var(--success-bg); color:var(--success); }
+.flag-content .flag-label  { font-weight: 700; font-size: 0.83rem; margin-bottom: 3px; }
+.flag-content .flag-detail { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; }
+
+.no-flags { padding: 16px 0; color: var(--success); font-size: 0.83rem; font-weight: 600; }
+.no-flags::before { content: '✓ '; }
+
+.auth-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px;
+}
+.auth-chip {
+  padding: 10px; border-radius: 8px; text-align: center;
+  border: 1px solid var(--border); background: var(--bg-card-alt);
+}
+.auth-chip .auth-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+                          color: var(--text-muted); text-transform: uppercase; }
+.auth-chip .auth-val   { font-size: 1rem; font-weight: 800; margin-top: 4px;
+                          font-family: var(--font-mono); }
+.auth-chip.pass { border-color:rgba(16,185,129,0.3); }
+.auth-chip.fail { border-color:rgba(239,68,68,0.3);  }
+.auth-chip.warn { border-color:rgba(245,158,11,0.3); }
+.auth-chip.pass .auth-val { color: var(--success); }
+.auth-chip.fail .auth-val { color: var(--danger);  }
+.auth-chip.warn .auth-val { color: var(--warning); }
+
+/* L3 AI card */
+.advisory-box {
+  background: var(--bg-card-alt); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px; margin-top: 12px;
+  font-size: 0.83rem; color: var(--text-secondary); line-height: 1.6;
+}
+.advisory-box strong { color: var(--text-primary); }
+
+/* L4 Actions */
+.action-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid rgba(26,39,68,0.3);
+  font-size: 0.83rem;
+}
+.action-item:last-child { border-bottom: none; }
+
+/* URL pills */
+.url-pill {
+  display: inline-block; max-width: 100%;
+  padding: 3px 10px; border-radius: 6px; font-size: 0.72rem;
+  font-family: var(--font-mono); background: var(--bg-card-alt);
+  border: 1px solid var(--border); color: var(--text-secondary);
+  word-break: break-all; margin: 3px 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page fade-in">
+
+  <!-- BREADCRUMB -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:0.8rem;color:var(--text-muted)">
+    <a href="/" style="color:var(--text-muted);text-decoration:none">Dashboard</a>
+    <span>→</span>
+    <span>Threat Report #{{ scan.id }}</span>
+  </div>
+
+  <!-- VERDICT HERO -->
+  {% set colour = scan.final_score | risk_colour %}
+  <div class="detail-hero {{ scan.verdict }}">
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+      <div class="score-gauge {{ colour }}">
+        <span class="num">{{ scan.final_score }}</span>
+        <span class="den">/100</span>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <div class="hero-verdict {{ scan.verdict }}">
+          {{ scan.verdict | verdict_icon }} {{ scan.verdict }}
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:8px;line-height:1.5">
+          {{ scan.l3_soc_advisory or 'No AI advisory generated.' }}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+          {% if scan.l3_threat_category %}
+          <span style="background:var(--bg-card-alt);border:1px solid var(--border);
+                       padding:3px 10px;border-radius:99px;font-size:0.72rem;font-weight:600;
+                       color:var(--text-secondary)">
+            🎯 {{ scan.l3_threat_category | upper }}
+          </span>
+          {% endif %}
+          {% if scan.l3_confidence %}
+          <span style="background:var(--bg-card-alt);border:1px solid var(--border);
+                       padding:3px 10px;border-radius:99px;font-size:0.72rem;font-weight:600;
+                       color:var(--text-secondary)">
+            🎲 CONFIDENCE: {{ scan.l3_confidence | upper }}
+          </span>
+          {% endif %}
+          <span style="background:var(--bg-card-alt);border:1px solid var(--border);
+                       padding:3px 10px;border-radius:99px;font-size:0.72rem;font-weight:600;
+                       color:var(--text-secondary)">
+            ⚡ {{ scan.processing_time_ms }}ms
+          </span>
+        </div>
+      </div>
+      <div style="min-width:200px">
+        <div class="meta-grid">
+          <span class="lbl">From</span>
+          <span class="val" style="font-size:0.78rem">{{ scan.sender or '—' }}</span>
+          <span class="lbl">Subject</span>
+          <span class="val" style="font-size:0.78rem">{{ scan.subject or '—' }}</span>
+          <span class="lbl">Received</span>
+          <span class="val" style="font-size:0.78rem">{{ scan.date_received or '—' }}</span>
+          <span class="lbl">Scanned</span>
+          <span class="val" style="font-size:0.78rem">{{ (scan.scanned_at or '')[:19].replace('T',' ') }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIPELINE BREAKDOWN (4 layers) -->
+
+  <!-- ── LAYER 1: AUTHENTICATION ── -->
+  {% set l1_pass = scan.l1_risk_score < 30 %}
+  <div class="layer-card">
+    <div class="layer-header">
+      <div class="layer-num-badge">1</div>
+      <div>
+        <div class="layer-header-title">Layer 1 — Cryptographic Authentication</div>
+        <div class="layer-header-sub">SPF · DKIM · DMARC · Header Consistency</div>
+      </div>
+      <span class="layer-status-chip {{ 'pass' if l1_pass else 'fail' }}">
+        {{ '✓ PASSED' if l1_pass else '✗ FAILED' }}
+      </span>
+      <span class="score-chip {{ colour }}" style="margin-left:8px">{{ scan.l1_risk_score }}/100</span>
+    </div>
+    <div class="layer-body">
+      <!-- Auth Result Chips -->
+      <div class="auth-grid">
+        {% for name, val in [('SPF', scan.l1_spf), ('DKIM', scan.l1_dkim), ('DMARC', scan.l1_dmarc)] %}
+        {% set v = (val or 'none') | lower %}
+        {% set chip_cls = 'pass' if v == 'pass' else ('warn' if v in ('softfail','none','neutral') else 'fail') %}
+        <div class="auth-chip {{ chip_cls }}">
+          <div class="auth-label">{{ name }}</div>
+          <div class="auth-val">{{ v | upper }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Flags -->
+      {% set l1_flags = scan.l1_flags if scan.l1_flags else [] %}
+      <div class="flag-list">
+        {% if l1_flags %}
+          {% for f in l1_flags %}
+          <div class="flag-entry">
+            <span class="flag-sev {{ f.severity if f is mapping else 'medium' }}">
+              {{ f.severity | upper if f is mapping else 'FLAG' }}
+            </span>
+            <div class="flag-content">
+              <div class="flag-label">{{ f.label if f is mapping else f }}</div>
+              {% if f is mapping and f.detail %}
+              <div class="flag-detail">{{ f.detail }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="no-flags">All cryptographic authentication checks passed</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LAYER 2: DOMAIN & URL ANALYSIS ── -->
+  {% set l2_pass = scan.l2_risk_score < 30 %}
+  <div class="layer-card">
+    <div class="layer-header">
+      <div class="layer-num-badge">2</div>
+      <div>
+        <div class="layer-header-title">Layer 2 — Domain & URL Analysis</div>
+        <div class="layer-header-sub">WHOIS Age · Typosquatting · Display Name Spoofing · URL Inspection</div>
+      </div>
+      <span class="layer-status-chip {{ 'pass' if l2_pass else 'fail' }}">
+        {{ '✓ PASSED' if l2_pass else '✗ FLAGGED' }}
+      </span>
+      <span class="score-chip {{ colour }}" style="margin-left:8px">{{ scan.l2_risk_score }}/100</span>
+    </div>
+    <div class="layer-body">
+      <!-- Domain metadata row -->
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Sender Domain</div>
+          <div style="font-family:var(--font-mono);font-size:0.85rem;margin-top:4px;color:var(--text-primary)">
+            {{ scan.sender_domain or '—' }}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Domain Age</div>
+          <div style="font-family:var(--font-mono);font-size:0.85rem;margin-top:4px;
+                      color:{% if scan.l2_domain_age_days and scan.l2_domain_age_days < 30 %}var(--danger){% else %}var(--success){% endif %}">
+            {% if scan.l2_domain_age_days is not none %}{{ scan.l2_domain_age_days }} days{% else %}Unknown{% endif %}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Typosquatting</div>
+          <div style="font-size:0.85rem;margin-top:4px;
+                      color:{% if scan.l2_typosquatting %}var(--danger){% else %}var(--success){% endif %}">
+            {% if scan.l2_typosquatting %}⚠ {{ scan.l2_typosquatting }}{% else %}✓ None{% endif %}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Display Spoofing</div>
+          <div style="font-size:0.85rem;margin-top:4px;
+                      color:{% if scan.l2_display_spoofing %}var(--danger){% else %}var(--success){% endif %}">
+            {% if scan.l2_display_spoofing %}⚠ Detected{% else %}✓ Clean{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Flags -->
+      {% set l2_flags = scan.l2_flags if scan.l2_flags else [] %}
+      <div class="flag-list">
+        {% if l2_flags %}
+          {% for f in l2_flags %}
+          <div class="flag-entry">
+            <span class="flag-sev {{ f.severity if f is mapping else 'medium' }}">
+              {{ f.severity | upper if f is mapping else 'FLAG' }}
+            </span>
+            <div class="flag-content">
+              <div class="flag-label">{{ f.label if f is mapping else f }}</div>
+              {% if f is mapping and f.detail %}
+              <div class="flag-detail">{{ f.detail }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="no-flags">All domain and URL checks passed</div>
+        {% endif %}
+      </div>
+
+      <!-- Suspicious URLs -->
+      {% set sus_urls = scan.l2_suspicious_urls if scan.l2_suspicious_urls else [] %}
+      {% if sus_urls %}
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:0.68rem;color:var(--text-muted);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">
+          Suspicious URLs Detected
+        </div>
+        {% for url_item in sus_urls %}
+          <div class="url-pill">{{ url_item.url if url_item is mapping else url_item }}</div>
+          {% if url_item is mapping and url_item.issues %}
+            {% for issue in url_item.issues %}
+            <div style="font-size:0.72rem;color:var(--danger);margin:2px 0 4px 10px">⚠ {{ issue }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── LAYER 3: AI ANALYSIS ── -->
+  {% set l3_pass = scan.l3_content_risk < 35 %}
+  <div class="layer-card">
+    <div class="layer-header">
+      <div class="layer-num-badge" style="background:#a855f7">3</div>
+      <div>
+        <div class="layer-header-title">Layer 3 — Constrained AI Threat Scoring</div>
+        <div class="layer-header-sub">AI sees violation report only — NOT the raw email (prompt injection prevention)</div>
+      </div>
+      <span class="layer-status-chip {{ 'pass' if l3_pass else 'warn' }}">
+        {{ '✓ LOW RISK' if l3_pass else '⚠ FLAGGED' }}
+      </span>
+      <span class="score-chip {{ colour }}" style="margin-left:8px">{{ scan.l3_content_risk }}/100</span>
+    </div>
+    <div class="layer-body">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700">Threat Category</div>
+          <div style="font-size:0.85rem;font-weight:700;margin-top:4px;color:var(--text-primary)">
+            {{ scan.l3_threat_category or '—' }}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700">AI Confidence</div>
+          <div style="font-size:0.85rem;font-weight:700;margin-top:4px;color:var(--accent)">
+            {{ scan.l3_confidence | upper if scan.l3_confidence else '—' }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Psychological Tactics -->
+      {% set tactics = scan.l3_psych_tactics if scan.l3_psych_tactics else [] %}
+      {% if tactics %}
+      <div style="margin-bottom:14px">
+        <div style="font-size:0.68rem;color:var(--text-muted);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">
+          Psychological Tactics Identified
+        </div>
+        {% for tactic in tactics %}
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(26,39,68,0.3);font-size:0.82rem">
+          <span style="color:var(--warning)">🎭</span> {{ tactic }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- SOC Advisory -->
+      {% if scan.l3_soc_advisory %}
+      <div class="advisory-box">
+        <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">
+          🤖 AI SOC Advisory
+        </div>
+        {{ scan.l3_soc_advisory }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── LAYER 4: ACTIONS ── -->
+  <div class="layer-card">
+    <div class="layer-header">
+      <div class="layer-num-badge" style="background:var(--success)">4</div>
+      <div>
+        <div class="layer-header-title">Layer 4 — Automated Inbox Remediation</div>
+        <div class="layer-header-sub">Gmail Labeling · Telegram Alerts · Audit Logging</div>
+      </div>
+      <span class="layer-status-chip pass">✓ EXECUTED</span>
+    </div>
+    <div class="layer-body">
+      {% set actions = scan.l4_actions if scan.l4_actions else [] %}
+      {% if actions %}
+        {% for action in actions %}
+        <div class="action-item">
+          <span>{% if '⚠' in action %}⚠️{% elif 'error' in action | lower %}❌{% else %}✅{% endif %}</span>
+          <span style="font-size:0.83rem">{{ action }}</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="action-item">
+          <span>ℹ️</span>
+          <span style="font-size:0.83rem;color:var(--text-secondary)">No automated actions were required for this email.</span>
+        </div>
+      {% endif %}
+
+      {% if scan.l4_label_applied %}
+      <div style="margin-top:14px;padding:10px;background:var(--bg-card-alt);border-radius:8px;
+                  border:1px solid var(--border);font-size:0.82rem">
+        <span style="color:var(--text-muted)">Gmail label applied: </span>
+        <strong>{{ scan.l4_label_applied }}</strong>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- BACK BUTTON -->
+  <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+    <a href="/" class="btn btn-ghost">← Back to Dashboard</a>
+  </div>
+
+</div>
+{% endblock %}

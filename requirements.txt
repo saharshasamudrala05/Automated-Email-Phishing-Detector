@@ -1,0 +1,22 @@
+# PhishGuard Production Dependencies
+
+# Web framework
+flask==3.0.3
+gunicorn==22.0.0
+
+# Environment config
+python-dotenv==1.0.1
+
+# Google Gmail API (OAuth 2.0)
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+google-api-python-client==2.127.0
+
+# Background scheduler (email polling)
+APScheduler==3.10.4
+
+# HTTP client (Groq API calls)
+requests==2.31.0
+
+# WHOIS domain age lookup (Layer 2)
+python-whois==0.9.4
